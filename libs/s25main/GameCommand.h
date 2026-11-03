@@ -63,10 +63,11 @@ enum class GCType : uint8_t
     NotifyAlliesOfLocation,
     SetTempleProductionMode,
     SetArmorAllowed,
+    SetWineAllowed,
 };
 constexpr auto maxEnumValue(GCType)
 {
-    return GCType::SetArmorAllowed;
+    return GCType::SetWineAllowed;
 }
 
 class GameCommand

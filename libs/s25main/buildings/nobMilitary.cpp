@@ -12,6 +12,7 @@
 #include "Point.h"
 #include "SerializedGameData.h"
 #include "Ware.h"
+#include "WineLoader.h"
 #include "addons/const_addons.h"
 #include "buildings/nobBaseWarehouse.h"
 #include "figures/nofAggressiveDefender.h"
@@ -42,8 +43,10 @@
 
 nobMilitary::nobMilitary(const BuildingType type, const MapPoint pos, const unsigned char player, const Nation nation)
     : nobBaseMilitary(type, pos, player, nation), new_built(true), numCoins(0), coinsDisabled(false),
-      coinsDisabledVirtual(false), numArmor(0), armorAllowed(true), armorAllowedVirtual(true), capturing(false),
-      capturing_soldiers(0), gold_order_event(nullptr), armor_order_event(nullptr), upgrade_event(nullptr),
+      coinsDisabledVirtual(false), numArmor(0), armorAllowed(true), armorAllowedVirtual(true), numWine(0), wineAllowed(true),
+      wineAllowedVirtual(true), capturing(false),
+      capturing_soldiers(0), gold_order_event(nullptr), armor_order_event(nullptr), wine_order_event(nullptr),
+      upgrade_event(nullptr),
       armor_upgrade_event(nullptr), is_regulating_troops(false)
 {
     // Gebäude entsprechend als Militärgebäude registrieren und in ein Militärquadrat eintragen
@@ -133,12 +136,14 @@ void nobMilitary::DestroyBuilding()
     // Events ggf. entfernen
     GetEvMgr().RemoveEvent(gold_order_event);
     GetEvMgr().RemoveEvent(armor_order_event);
+    GetEvMgr().RemoveEvent(wine_order_event);
     GetEvMgr().RemoveEvent(upgrade_event);
     GetEvMgr().RemoveEvent(armor_upgrade_event);
 
     // übriggebliebene Goldmünzen in der Inventur abmelden
     world->GetPlayer(player).DecreaseInventoryWare(GoodType::Coins, numCoins);
     world->GetPlayer(player).DecreaseInventoryWare(GoodType::Armor, numArmor);
+    world->GetPlayer(player).DecreaseInventoryWare(GoodType::Wine, numWine);
 
     nobBaseMilitary::DestroyBuilding();
     // If this was occupied, recalc territory. AFTER calling base destroy as otherwise figures might get stuck here
@@ -172,6 +177,11 @@ void nobMilitary::Serialize(SerializedGameData& sgd) const
     sgd.PushEvent(armor_order_event);
     sgd.PushEvent(armor_upgrade_event);
     sgd.PushObjectContainer(ordered_armor, true);
+
+    sgd.PushUnsignedChar(numWine);
+    sgd.PushBool(wineAllowed);
+    sgd.PushEvent(wine_order_event);
+    sgd.PushObjectContainer(ordered_wine, true);
 }
 
 nobMilitary::nobMilitary(SerializedGameData& sgd, const unsigned obj_id)
@@ -203,6 +213,19 @@ nobMilitary::nobMilitary(SerializedGameData& sgd, const unsigned obj_id)
         armorAllowedVirtual = armorAllowed = true;
         armor_order_event = nullptr;
         armor_upgrade_event = nullptr;
+    }
+
+    if(sgd.GetGameDataVersion() >= 16)
+    {
+        numWine = sgd.PopUnsignedChar();
+        wineAllowedVirtual = wineAllowed = sgd.PopBool();
+        wine_order_event = sgd.PopEvent();
+        sgd.PopObjectContainer(ordered_wine, GO_Type::Ware);
+    } else
+    {
+        numWine = 0;
+        wineAllowedVirtual = wineAllowed = true;
+        wine_order_event = nullptr;
     }
 
     // ins Militärquadrat einfügen
@@ -405,6 +428,13 @@ void nobMilitary::HandleEvent(const unsigned id)
             }
         }
         break;
+        // Order wine event
+        case 5:
+        {
+            wine_order_event = nullptr;
+            SearchWine();
+        }
+        break;
     }
 }
 
@@ -421,6 +451,11 @@ unsigned nobMilitary::GetMaxCoinCt() const
 unsigned nobMilitary::GetMaxArmorCt() const
 {
     return NUM_ARMOR[nation][size];
+}
+
+unsigned nobMilitary::GetMaxWineCt() const
+{
+    return NUM_WINE[nation][size];
 }
 
 unsigned nobMilitary::GetMaxTroopsCt() const
@@ -739,6 +774,10 @@ void nobMilitary::TakeWare(Ware* ware)
     {
         RTTR_Assert(!helpers::contains(ordered_coins, ware));
         ordered_coins.push_back(ware);
+    } else if(ware->type == GoodType::Wine)
+    {
+        RTTR_Assert(!helpers::contains(ordered_wine, ware));
+        ordered_wine.push_back(ware);
     } else
     {
         RTTR_Assert(ware->type == GoodType::Armor);
@@ -763,6 +802,18 @@ void nobMilitary::AddWare(std::unique_ptr<Ware> ware)
 
         // Evtl. Soldaten befördern
         PrepareUpgrading();
+    } else if(ware->type == GoodType::Wine)
+    {
+        ++numWine;
+        RTTR_Assert(helpers::contains(ordered_wine, ware.get()));
+        ordered_wine.remove(ware.get());
+
+        world->GetPlayer(player).RemoveWare(*ware);
+        ware.reset();
+
+        // Heal anyone who is waiting for it and order more if still needed
+        HealTroops();
+        SearchWine();
     } else
     {
         ++numArmor;
@@ -783,6 +834,10 @@ void nobMilitary::WareLost(Ware& ware)
         // Ein Goldstück konnte nicht kommen --> aus der Bestellliste entfernen
         RTTR_Assert(helpers::contains(ordered_coins, &ware));
         ordered_coins.remove(&ware);
+    } else if(ware.type == GoodType::Wine)
+    {
+        RTTR_Assert(helpers::contains(ordered_wine, &ware));
+        ordered_wine.remove(&ware);
     } else
     {
         RTTR_Assert(helpers::contains(ordered_armor, &ware));
@@ -820,6 +875,11 @@ void nobMilitary::CancelOrders()
         WareNotNeeded(ordered_armor);
 
     ordered_armor.clear();
+
+    for(auto* orderedWine : ordered_wine)
+        WareNotNeeded(orderedWine);
+
+    ordered_wine.clear();
 }
 
 void nobMilitary::AddActiveSoldier(std::unique_ptr<nofActiveSoldier> soldier)
@@ -883,6 +943,10 @@ void nobMilitary::AddPassiveSoldier(std::unique_ptr<nofPassiveSoldier> soldier)
     // Goldmünzen suchen, evtl sinds ja neue Soldaten
     SearchCoins();
     SearchArmor();
+
+    // An injured soldier that returned home gets healed with wine (if available), more wine may be needed now
+    HealTroops();
+    SearchWine();
 }
 
 void nobMilitary::SoldierLost(nofSoldier* soldier)
@@ -1083,6 +1147,9 @@ void nobMilitary::Capture(const unsigned char new_owner)
 
     world->GetPlayer(player).DecreaseInventoryWare(GoodType::Armor, numArmor);
     world->GetPlayer(new_owner).IncreaseInventoryWare(GoodType::Armor, numArmor);
+
+    world->GetPlayer(player).DecreaseInventoryWare(GoodType::Wine, numWine);
+    world->GetPlayer(new_owner).IncreaseInventoryWare(GoodType::Wine, numWine);
 
     // Reset desired troop setting
     troop_limits.fill(GetMaxTroopsCt());
@@ -1456,6 +1523,105 @@ void nobMilitary::SearchArmor()
 
             // After some time, try to order new armor
             armor_order_event = GetEvMgr().AddEvent(this, 200 + RANDOM_RAND(400), 3);
+        }
+    }
+}
+
+unsigned nobMilitary::CalcWinePoints() const
+{
+    if(!WantWine())
+        return 0;
+
+    // choose 10000 as basic, so we can still subtract something
+    int points = 10000;
+
+    // Wine already in the house or on its way makes the request less important
+    points -= (numWine + ordered_wine.size()) * 30;
+
+    // Injured soldiers make it more important
+    const auto numInjured =
+      helpers::count_if(troops, [](OwnedSortedTroops::value_type const& troop) { return troop->IsInjured(); });
+    points += static_cast<int>(numInjured * 20);
+
+    if(points < 0)
+        throw std::logic_error("Negative points are not allowed");
+
+    return static_cast<unsigned>(points);
+}
+
+bool nobMilitary::WantWine() const
+{
+    return (wineaddon::isAddonActive(*world) && wineAllowed && numWine + ordered_wine.size() < GetMaxWineCt()
+            && !new_built);
+}
+
+void nobMilitary::SetWineAllowed(const bool enabled)
+{
+    if(wineAllowed == enabled)
+        return;
+
+    wineAllowed = enabled;
+    if(GAMECLIENT.GetPlayerId() != player || GAMECLIENT.IsReplayModeOn())
+        wineAllowedVirtual = wineAllowed;
+
+    if(wineAllowed)
+        SearchWine();
+    else
+    {
+        // send wine back if just deactivated
+        for(auto it = ordered_wine.begin(); it != ordered_wine.end();)
+        {
+            // But only those, that are not just being carried in
+            if((*it)->GetLocation() != this)
+            {
+                WareNotNeeded(*it);
+                it = ordered_wine.erase(it);
+            } else
+                ++it;
+        }
+    }
+}
+
+void nobMilitary::SearchWine()
+{
+    if(WantWine() && !wine_order_event)
+    {
+        nobBaseWarehouse* wh =
+          world->GetPlayer(player).FindWarehouse(*this, FW::HasMinWares(GoodType::Wine), false, false);
+        if(wh)
+        {
+            Ware* ware = wh->OrderWare(GoodType::Wine, *this);
+
+            if(!ware)
+            {
+                RTTR_Assert(false);
+                LOG.write("nobMilitary::SearchWine: WARNING: ware = nullptr. Bug alarm!\n");
+                return;
+            }
+
+            RTTR_Assert(helpers::contains(ordered_wine, ware));
+
+            // After some time, try to order new wine
+            wine_order_event = GetEvMgr().AddEvent(this, 200 + RANDOM_RAND(400), 5);
+        }
+    }
+}
+
+void nobMilitary::HealTroops()
+{
+    if(numWine == 0)
+        return;
+
+    for(auto& troop : troops)
+    {
+        if(numWine == 0)
+            break;
+        if(troop->IsInjured())
+        {
+            // Healing does not change the rank, so the ordering of the troops stays valid
+            troop->HealFully();
+            --numWine;
+            world->GetPlayer(player).DecreaseInventoryWare(GoodType::Wine, 1);
         }
     }
 }

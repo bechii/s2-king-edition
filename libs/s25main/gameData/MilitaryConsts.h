@@ -46,6 +46,10 @@ constexpr helpers::EnumArray<std::array<int, NUM_MILITARY_BLDS>, Nation> NUM_GOL
 constexpr helpers::EnumArray<std::array<int, NUM_MILITARY_BLDS>, Nation> NUM_ARMOR = {
   {{1, 2, 4, 6}, {1, 2, 4, 6}, {1, 2, 4, 6}, {1, 2, 4, 6}, {1, 2, 4, 6}}};
 
+/// Number of wine slots for each military building (wine heals injured soldiers returning home)
+constexpr helpers::EnumArray<std::array<int, NUM_MILITARY_BLDS>, Nation> NUM_WINE = {
+  {{0, 1, 3, 5}, {0, 1, 3, 5}, {0, 1, 3, 5}, {0, 1, 3, 5}, {0, 1, 3, 5}}};
+
 /// Radien der Militärgebäude
 inline constexpr std::array MILITARY_RADIUS{8u, 9u, 10u, 11u};
 // Radius für einzelne Hafen(baustellen)

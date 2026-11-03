@@ -161,6 +161,8 @@ public:
     /// Sucht einen Abnehmer (sprich Militärgebäude), wenn es keinen findet, wird ein Warenhaus zurückgegeben bzw. 0
     nobBaseMilitary* FindClientForCoin(const Ware& ware) const;
     nobBaseMilitary* FindClientForArmor(const Ware& ware) const;
+    /// Returns a military building that wants the wine (for healing) or nullptr
+    nobBaseMilitary* FindMilitaryClientForWine(const Ware& ware) const;
 
     /// Gibt Priorität der Baustelle zurück (entscheidet selbständig, welche Reihenfolge usw)
     /// je kleiner die Rückgabe, destro größer die Priorität!

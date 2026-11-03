@@ -6,6 +6,7 @@
 #include "EventManager.h"
 #include "GamePlayer.h"
 #include "SerializedGameData.h"
+#include "WineLoader.h"
 #include "buildings/nobMilitary.h"
 #include "helpers/containerUtils.h"
 #include "helpers/pointerContainerUtils.h"
@@ -79,8 +80,27 @@ void nofPassiveSoldier::HandleDerivedEvent(const unsigned id)
     }
 }
 
+bool nofPassiveSoldier::IsInjured() const
+{
+    return hitpoints < HITPOINTS[GetRank()];
+}
+
+void nofPassiveSoldier::HealFully()
+{
+    if(healing_event)
+    {
+        GetEvMgr().RemoveEvent(healing_event);
+        healing_event = nullptr;
+    }
+    hitpoints = HITPOINTS[GetRank()];
+}
+
 void nofPassiveSoldier::Heal()
 {
+    // With the wine addon, soldiers do not heal on their own: the military building uses wine to heal them
+    if(wineaddon::isAddonActive(*world))
+        return;
+
     // Schon ein Event angemeldet?
     // Dann muss dieses entfernt werden, wahrscheinlich war er zuvor draußen gewesen
     if(healing_event)

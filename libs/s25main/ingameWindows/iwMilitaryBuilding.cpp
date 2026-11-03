@@ -9,6 +9,7 @@
 #include "LeatherLoader.h"
 #include "Loader.h"
 #include "WindowManager.h"
+#include "WineLoader.h"
 #include "addons/const_addons.h"
 #include "buildings/nobMilitary.h"
 #include "controls/ctrlImageButton.h"
@@ -28,6 +29,7 @@
 #include "gameData/const_gui_ids.h"
 
 constexpr unsigned ARMOR_ENABLE_BUTTON_ID = 10 + NUM_SOLDIER_RANKS * 4 + 1;
+constexpr unsigned WINE_ENABLE_BUTTON_ID = ARMOR_ENABLE_BUTTON_ID + 1;
 constexpr unsigned HEIGHT_OF_ROW = 38;
 
 iwMilitaryBuilding::iwMilitaryBuilding(GameWorldView& gwv, GameCommandFactory& gcFactory, nobMilitary* const building)
@@ -41,12 +43,16 @@ iwMilitaryBuilding::iwMilitaryBuilding(GameWorldView& gwv, GameCommandFactory& g
     if(addonStatusMilitaryControl == 2)
         btOffset.y += 154;
 
-    DrawPoint btOffsetLeatherAddon(0, 0);
-    if(leatheraddon::isAddonActive(gwv.GetWorld()))
-    {
-        btOffsetLeatherAddon = DrawPoint(addonStatusMilitaryControl == 0 ? 0 : 36, HEIGHT_OF_ROW);
-        btOffset += btOffsetLeatherAddon;
-    }
+    // Armor and wine each add a row (storage display) and a button to the window
+    const bool leatherAddonActive = leatheraddon::isAddonActive(gwv.GetWorld());
+    const bool wineActive = wineaddon::isAddonActive(gwv.GetWorld()) && building->GetMaxWineCt() > 0;
+    const unsigned numExtra = (leatherAddonActive ? 1u : 0u) + (wineActive ? 1u : 0u);
+    // Without military control buttons the first extra button takes the free slot of the control button
+    const unsigned numExtraWide = (addonStatusMilitaryControl == 0 && numExtra > 0) ? numExtra - 1 : numExtra;
+    const DrawPoint btOffsetExtra(36 * numExtraWide, HEIGHT_OF_ROW * numExtra);
+    btOffset += btOffsetExtra;
+    // x position of the first button after the (optional) military control button
+    const int firstExtraButtonX = (addonStatusMilitaryControl == 0) ? 126 : 162;
 
     Resize(Extent(226 + btOffset.x, 194 + btOffset.y));
 
@@ -77,10 +83,18 @@ iwMilitaryBuilding::iwMilitaryBuilding(GameWorldView& gwv, GameCommandFactory& g
     AddImageButton(9, DrawPoint(179 + btOffset.x, btOffset.y + 115), Extent(30, 32), TextureColor::Grey,
                    LOADER.GetImageN("io_new", 11), _("Go to next military building"));
 
-    if(leatheraddon::isAddonActive(gwv.GetWorld()))
+    if(wineActive)
+    {
+        AddImageButton(WINE_ENABLE_BUTTON_ID,
+                       DrawPoint(firstExtraButtonX + (leatherAddonActive ? 36 : 0), btOffset.y + 147), Extent(32, 32),
+                       building->IsWineAllowedVirtual() ? TextureColor::Grey : TextureColor::Red1,
+                       LOADER.GetWareTex(GoodType::Wine), _("Wine delivery"));
+    }
+
+    if(leatherAddonActive)
     {
         AddImageButton(
-          ARMOR_ENABLE_BUTTON_ID, DrawPoint(126 + btOffsetLeatherAddon.x, btOffset.y + 147), Extent(32, 32),
+          ARMOR_ENABLE_BUTTON_ID, DrawPoint(firstExtraButtonX, btOffset.y + 147), Extent(32, 32),
           TextureColor::Grey,
           LOADER.GetImageN("leather_bobs", leatheraddon::bobIndex[building->IsArmorAllowedVirtual() ?
                                                                     leatheraddon::BobType::ArmorDeliverIcon :
@@ -103,16 +117,16 @@ iwMilitaryBuilding::iwMilitaryBuilding(GameWorldView& gwv, GameCommandFactory& g
         for(unsigned i = 0; i < NUM_SOLDIER_RANKS; ++i)
         {
             // Minus
-            AddImageButton(11 + (4 * i), DrawPoint(69 + btOffset.x / 2, 136 + btOffsetLeatherAddon.y + Y_SPACING * i),
+            AddImageButton(11 + (4 * i), DrawPoint(69 + btOffset.x / 2, 136 + btOffsetExtra.y + Y_SPACING * i),
                            Extent(24, 24), TextureColor::Red1, LOADER.GetImageN("io", 139), _("Fewer"));
             // Background
-            AddImage(12 + (4 * i), DrawPoint(113 + btOffset.x / 2, 148 + btOffsetLeatherAddon.y + Y_SPACING * i),
+            AddImage(12 + (4 * i), DrawPoint(113 + btOffset.x / 2, 148 + btOffsetExtra.y + Y_SPACING * i),
                      LOADER.GetMapTexture(2298));
             // Rank image
-            AddImage(13 + (4 * i), DrawPoint(113 + btOffset.x / 2, 148 + btOffsetLeatherAddon.y + Y_SPACING * i),
+            AddImage(13 + (4 * i), DrawPoint(113 + btOffset.x / 2, 148 + btOffsetExtra.y + Y_SPACING * i),
                      LOADER.GetMapTexture(2321 + i));
             // Plus
-            AddImageButton(14 + (4 * i), DrawPoint(133 + btOffset.x / 2, 136 + btOffsetLeatherAddon.y + Y_SPACING * i),
+            AddImageButton(14 + (4 * i), DrawPoint(133 + btOffset.x / 2, 136 + btOffsetExtra.y + Y_SPACING * i),
                            Extent(24, 24), TextureColor::Green2, LOADER.GetImageN("io", 138), _("More"));
         }
     }
@@ -150,6 +164,23 @@ void iwMilitaryBuilding::DrawContent()
         {
             armorWareIcon->DrawFull(armorPos, (i >= building->GetNumArmor() ? 0xFFA0A0A0 : 0xFFFFFFFF));
             armorPos.x += 22;
+        }
+        btOffsetY += HEIGHT_OF_ROW;
+    }
+
+    if(wineaddon::isAddonActive(gwv.GetWorld()) && building->GetMaxWineCt() > 0)
+    {
+        // Black background for wine display
+        const unsigned maxWineCt = building->GetMaxWineCt();
+        DrawPoint winePos = GetDrawPos() + DrawPoint((GetSize().x - 22 * maxWineCt) / 2, btOffsetY);
+        DrawRectangle(Rect(winePos, Extent(22 * maxWineCt, 24)), 0x96000000);
+        // Wine
+        winePos += DrawPoint(12, 12);
+        for(unsigned short i = 0; i < maxWineCt; ++i)
+        {
+            LOADER.GetWareTex(GoodType::Wine)
+              ->DrawFull(winePos, (i >= building->GetNumWine() ? 0xFFA0A0A0 : 0xFFFFFFFF));
+            winePos.x += 22;
         }
         btOffsetY += HEIGHT_OF_ROW;
     }
@@ -326,6 +357,19 @@ void iwMilitaryBuilding::Msg_ButtonClick(const unsigned ctrl_id)
                       "leather_bobs", leatheraddon::bobIndex[building->IsArmorAllowedVirtual() ?
                                                                leatheraddon::BobType::ArmorDeliverIcon :
                                                                leatheraddon::BobType::DisableDeliveryArmorIcon]));
+                }
+            }
+        }
+        break;
+        case WINE_ENABLE_BUTTON_ID:
+        {
+            if(!GAMECLIENT.IsReplayModeOn())
+            {
+                if(gcFactory.SetWineAllowed(building->GetPos(), !building->IsWineAllowedVirtual()))
+                {
+                    building->ToggleWineVirtual();
+                    GetCtrl<ctrlImageButton>(ctrl_id)->SetTexture(building->IsWineAllowedVirtual() ? TextureColor::Grey :
+                                                                                                     TextureColor::Red1);
                 }
             }
         }

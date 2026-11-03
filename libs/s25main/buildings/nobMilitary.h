@@ -50,6 +50,10 @@ private:
     bool coinsDisabled, coinsDisabledVirtual;
     unsigned char numArmor;
     bool armorAllowed, armorAllowedVirtual;
+    /// Number of wine in the building (used to heal injured soldiers)
+    unsigned char numWine;
+    /// Is wine delivery allowed (second only visual, to hide network latency)
+    bool wineAllowed, wineAllowedVirtual;
     /// Entfernung zur freindlichen Grenze (woraus sich dann die Besatzung ergibt) von 0-3, 0 fern, 3 nah, 2 Hafen!
     FrontierDistance frontier_distance;
     /// Größe bzw Typ des Militärgebäudes (0 = Baracke, 3 = Festung)
@@ -59,6 +63,7 @@ private:
     /// Bestellter Goldmünzen
     std::list<Ware*> ordered_coins;
     std::list<Ware*> ordered_armor;
+    std::list<Ware*> ordered_wine;
     /// Gibt an, ob gerade die Eroberer in das Gebäude gehen (und es so nicht angegegriffen werden sollte)
     bool capturing;
     /// Anzahl der Soldaten, die das Militärgebäude gerade noch einnehmen
@@ -69,6 +74,7 @@ private:
     /// Gold-Bestell-Event
     const GameEvent* gold_order_event;
     const GameEvent* armor_order_event;
+    const GameEvent* wine_order_event;
     /// Beförderung-Event
     const GameEvent* upgrade_event;
     const GameEvent* armor_upgrade_event;
@@ -88,6 +94,9 @@ private:
     /// Will/kann das Gebäude noch Münzen bekommen?
     bool WantCoins() const;
     bool WantArmor() const;
+    bool WantWine() const;
+    /// Uses stored wine to fully heal injured soldiers inside the building
+    void HealTroops();
     /// Prüft, ob Goldmünzen und Soldaten, die befördert werden können, vorhanden sind und meldet ggf. ein
     /// Beförderungsevent an
     void PrepareUpgrading();
@@ -124,6 +133,7 @@ public:
     unsigned GetMilitaryRadius() const override;
     unsigned GetMaxCoinCt() const;
     unsigned GetMaxArmorCt() const;
+    unsigned GetMaxWineCt() const;
     unsigned GetMaxTroopsCt() const;
 
     /// Sucht feindliche Miitärgebäude im Umkreis und setzt die frontier_distance entsprechend (sowohl selber als
@@ -165,6 +175,7 @@ public:
     /// Berechnet, wie dringend eine Goldmünze gebraucht wird, in Punkten, je höher desto dringender
     unsigned CalcCoinsPoints() const;
     unsigned CalcArmorPoints() const;
+    unsigned CalcWinePoints() const;
 
     /// Wird aufgerufen, wenn ein Soldat kommt
     void GotWorker(Job job, noFigure& worker) override;
@@ -234,6 +245,11 @@ public:
     bool IsArmorAllowedVirtual() const { return armorAllowedVirtual; }
     bool IsArmorAllowed() const { return armorAllowed; }
     unsigned char GetNumArmor() const { return numArmor; }
+    unsigned char GetNumWine() const { return numWine; }
+    void ToggleWineVirtual() { wineAllowedVirtual = !wineAllowedVirtual; }
+    void SetWineAllowed(bool enabled);
+    bool IsWineAllowedVirtual() const { return wineAllowedVirtual; }
+    bool IsWineAllowed() const { return wineAllowed; }
 
     /// is there a max rank soldier in the building?
     bool HasMaxRankSoldier() const;
@@ -241,6 +257,7 @@ public:
     /// Sucht sämtliche Lagerhäuser nach Goldmünzen ab und bestellt ggf. eine, falls eine gebraucht wird
     void SearchCoins();
     void SearchArmor();
+    void SearchWine();
 
     /// Gebäude wird von einem Katapultstein getroffen
     void HitOfCatapultStone();

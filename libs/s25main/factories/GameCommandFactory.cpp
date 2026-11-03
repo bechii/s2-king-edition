@@ -97,6 +97,11 @@ bool GameCommandFactory::SetArmorAllowed(const MapPoint pt, bool enabled)
     return AddGC(new gc::SetArmorAllowed(pt, enabled));
 }
 
+bool GameCommandFactory::SetWineAllowed(const MapPoint pt, bool enabled)
+{
+    return AddGC(new gc::SetWineAllowed(pt, enabled));
+}
+
 bool GameCommandFactory::SetProductionEnabled(const MapPoint pt, bool enabled)
 {
     return AddGC(new gc::SetProductionEnabled(pt, enabled));

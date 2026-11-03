@@ -1045,6 +1045,12 @@ noBaseBuilding* GamePlayer::FindClientForWare(const Ware& ware)
         return FindClientForCoin(ware);
     else if(ware.type == GoodType::Armor)
         return FindClientForArmor(ware);
+    else if(ware.type == GoodType::Wine)
+    {
+        // Military buildings needing wine for healing get it first, otherwise use the normal distribution (temples)
+        if(nobBaseMilitary* militaryClient = FindMilitaryClientForWine(ware))
+            return militaryClient;
+    }
 
     // Warentyp herausfinden
     GoodType gt = ware.type;
@@ -1252,6 +1258,12 @@ nobBaseMilitary* GamePlayer::FindClientForArmor(const Ware& ware) const
         result = FindWarehouseForWare(ware);
 
     return result;
+}
+
+nobBaseMilitary* GamePlayer::FindMilitaryClientForWine(const Ware& ware) const
+{
+    return FindClientImpl(
+      ware, [](const nobMilitary& bld) { return bld.CalcWinePoints(); }, buildings.GetMilitaryBuildings());
 }
 
 unsigned GamePlayer::GetBuidingSitePriority(const noBuildingSite* building_site)

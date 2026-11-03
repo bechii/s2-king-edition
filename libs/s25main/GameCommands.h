@@ -431,6 +431,25 @@ public:
     void Execute(GameWorld& world, uint8_t playerId) override;
 };
 
+/// Allow/stop wine delivery to building
+class SetWineAllowed : public Coords
+{
+    GC_FRIEND_DECL;
+    const bool enabled;
+
+protected:
+    SetWineAllowed(const MapPoint pt, bool enabled) : Coords(GCType::SetWineAllowed, pt), enabled(enabled) {}
+    SetWineAllowed(Serializer& ser) : Coords(GCType::SetWineAllowed, ser), enabled(ser.PopBool()) {}
+
+public:
+    void Serialize(Serializer& ser) const override
+    {
+        Coords::Serialize(ser);
+        ser.PushBool(enabled);
+    }
+    void Execute(GameWorld& world, uint8_t playerId) override;
+};
+
 /// Produktivität in einem Gebäude deaktivieren/aktivieren
 class SetProductionEnabled : public Coords
 {

@@ -55,4 +55,9 @@ public:
     /// Tells the soldier it is not in its home building anymore (e.g. died, or converted to attacker)
     void LeftBuilding() { homeBld = nullptr; }
     nobMilitary* getHome() const;
+
+    /// Is the soldier below his maximum hitpoints?
+    bool IsInjured() const;
+    /// Instantly restores all hitpoints (used when a wine is consumed)
+    void HealFully();
 };

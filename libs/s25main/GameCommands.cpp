@@ -256,6 +256,13 @@ void SetArmorAllowed::Execute(GameWorld& world, uint8_t playerId)
         bld->SetArmorAllowed(enabled);
 }
 
+void SetWineAllowed::Execute(GameWorld& world, uint8_t playerId)
+{
+    auto* const bld = world.GetSpecObj<nobMilitary>(pt_);
+    if(bld && bld->GetPlayer() == playerId)
+        bld->SetWineAllowed(enabled);
+}
+
 void SetTroopLimit::Execute(GameWorld& world, uint8_t playerId)
 {
     auto* const bld = world.GetSpecObj<nobMilitary>(pt_);
