@@ -129,13 +129,9 @@ nofFarmhand::PointQuality nofCharburner::GetPointQuality(const MapPoint pt, cons
         // Wood stack which still need resources?
         if(pileState == noCharburnerPile::State::Wood)
         {
-            // Only check for resources before going out
-            if(isBeforeWork && !workplace->WaresAvailable())
-                return PointQuality::NotPossible;
-            else
-                // Only second class, harvest all piles first before continue
-                // to build others
-                return PointQuality::Class2;
+            // Continuing an existing pile costs nothing (wares were consumed when planting it).
+            // Only second class, harvest all piles first before continue to build others
+            return PointQuality::Class2;
         }
 
         // All ok, work on this pile
@@ -188,10 +184,11 @@ void nofCharburner::WalkingStarted()
     else
         harvest = false;
 
-    // Consume wares if we carry a ware
+    // Wares (1 wood + 1 board) are only consumed when planting a new pile
     if(!harvest)
     {
-        workplace->ConsumeWares();
+        if(nob->GetGOT() != GO_Type::Charburnerpile)
+            workplace->ConsumeWares();
         // Dertermine ware which we should carry to the pile
         if(nob->GetGOT() != GO_Type::Charburnerpile)
             wt = WareType::Wood;

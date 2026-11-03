@@ -28,6 +28,8 @@ const std::array<unsigned short, 2> CONSTRUCTION_WORKING_STEPS = {6, 6};
 const unsigned short REMOVECOVER_WORK_STEPS = 1;
 /// Work steps for one graphical step during the "harvest"
 const unsigned short HARVEST_WORK_STEPS = 1;
+/// Number of harvest trips = number of coal yielded per pile (the worker carries one coal per trip)
+const unsigned short HARVEST_STEPS = 1;
 
 noCharburnerPile::noCharburnerPile(const MapPoint pos)
     : noCoordBase(NodalObjectType::CharburnerPile, pos), state(State::Wood), step(0), sub_step(1), event(nullptr)
@@ -191,7 +193,7 @@ void noCharburnerPile::NextStep()
                 sub_step = 0;
 
                 // Reached new state?
-                if(step == 6)
+                if(step == HARVEST_STEPS)
                 {
                     // Add an empty pile as environmental object
                     world->SetNO(pos, new noEnvObject(pos, 40, 6), true);
@@ -208,6 +210,7 @@ void noCharburnerPile::NextStep()
 
 noCharburnerPile::WareType noCharburnerPile::GetNeededWareType() const
 {
+    // Purely visual: the actual wares were already consumed when the pile was planted
     if(sub_step % 2 == 0)
         return WareType::Wood;
     else
