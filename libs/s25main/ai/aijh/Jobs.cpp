@@ -224,11 +224,13 @@ void BuildJob::BuildMainRoad()
     {
         case BuildingType::Forester: aijh.AddBuildJob(BuildingType::Woodcutter, target); break;
         case BuildingType::Charburner:
+        case BuildingType::Vineyard:
         case BuildingType::Farm: aijh.SetFarmedNodes(target, true); break;
         case BuildingType::Mill: aijh.AddBuildJob(BuildingType::Bakery, target); break;
         case BuildingType::PigFarm: aijh.AddBuildJob(BuildingType::Slaughterhouse, target); break;
         case BuildingType::Bakery:
         case BuildingType::Slaughterhouse:
+        case BuildingType::Winery:
         case BuildingType::Brewery: aijh.AddBuildJob(BuildingType::Well, target); break;
         default: break;
     }

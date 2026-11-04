@@ -245,9 +245,8 @@ void BuildingPlanner::UpdateBuildingsWanted(const AIPlayerJH& aijh)
         buildingsWanted[BuildingType::Metalworks] = (GetNumBuildings(BuildingType::Ironsmelter) > 0) ? 1 : 0;
 
         // max processing
-        unsigned foodusers = GetNumBuildings(BuildingType::Charburner) + GetNumBuildings(BuildingType::Mill)
-                             + GetNumBuildings(BuildingType::Brewery) + GetNumBuildings(BuildingType::PigFarm)
-                             + GetNumBuildings(BuildingType::DonkeyBreeder);
+        unsigned foodusers = GetNumBuildings(BuildingType::Mill) + GetNumBuildings(BuildingType::Brewery)
+                             + GetNumBuildings(BuildingType::PigFarm) + GetNumBuildings(BuildingType::DonkeyBreeder);
 
         if(GetNumBuildings(BuildingType::Farm) >= foodusers - GetNumBuildings(BuildingType::Mill))
             buildingsWanted[BuildingType::Mill] =
@@ -267,9 +266,46 @@ void BuildingPlanner::UpdateBuildingsWanted(const AIPlayerJH& aijh)
         buildingsWanted[BuildingType::Slaughterhouse] = std::min(
           inventory.goods[GoodType::Cleaver] + inventory.people[Job::Butcher], GetNumBuildings(BuildingType::PigFarm));
 
+        // Wine economy (wine addon only): Vineyard -> Winery (needs water) -> Temple (needs wine + ham)
+        if(aijh.ggs.isEnabled(AddonId::WINE))
+        {
+            // Wine also heals soldiers in military buildings, so we want it as soon as we expand
+            const unsigned maxWineries = std::min(1u + numMilitaryBlds / 12u, 3u);
+            // Winegrowers need a shovel, which they share with foresters and charburners
+            const unsigned winegrowerLimit = inventory.people[Job::Winegrower] + inventory.goods[GoodType::Shovel];
+            buildingsWanted[BuildingType::Vineyard] = std::min(maxWineries, winegrowerLimit);
+            // Only build a winery once there is a vineyard to supply it
+            buildingsWanted[BuildingType::Winery] = std::min(maxWineries, GetNumBuildings(BuildingType::Vineyard));
+
+            // Temples only use surplus wine (military buildings are supplied first) and scale with the number of
+            // wineries and pig farms. Temple servants need a crucible, which they share with iron founders, so only
+            // build them after the first iron smelter.
+            constexpr unsigned wineStockPerTemple = 6;
+            constexpr unsigned hamStockPerTemple = 3;
+            const unsigned numTemples = GetNumBuildings(BuildingType::Temple);
+            const unsigned templeServantLimit =
+              inventory.people[Job::TempleServant] + inventory.goods[GoodType::Crucible];
+            const unsigned maxTemples = std::min({GetNumBuildings(BuildingType::Winery),
+                                                  GetNumBuildings(BuildingType::PigFarm), templeServantLimit});
+            buildingsWanted[BuildingType::Temple] = numTemples; // Never demolish, just don't build more
+            if(numTemples < maxTemples && GetNumBuildingSites(BuildingType::Temple) == 0
+               && GetNumBuildings(BuildingType::Ironsmelter) > 0
+               && aijh.AmountInStorage(GoodType::Wine) >= wineStockPerTemple * (numTemples + 1)
+               && aijh.AmountInStorage(GoodType::Ham) >= hamStockPerTemple * (numTemples + 1))
+            {
+                buildingsWanted[BuildingType::Temple] = numTemples + 1;
+            }
+        } else
+        {
+            buildingsWanted[BuildingType::Vineyard] = 0;
+            buildingsWanted[BuildingType::Winery] = 0;
+            buildingsWanted[BuildingType::Temple] = 0;
+        }
+
         buildingsWanted[BuildingType::Well] =
           buildingsWanted[BuildingType::Bakery] + buildingsWanted[BuildingType::PigFarm]
-          + buildingsWanted[BuildingType::DonkeyBreeder] + buildingsWanted[BuildingType::Brewery];
+          + buildingsWanted[BuildingType::DonkeyBreeder] + buildingsWanted[BuildingType::Brewery]
+          + buildingsWanted[BuildingType::Winery];
 
         buildingsWanted[BuildingType::Farm] =
           std::min<unsigned>(inventory.goods[GoodType::Scythe] + inventory.people[Job::Farmer], foodusers + 3);

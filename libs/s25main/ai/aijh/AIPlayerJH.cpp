@@ -317,16 +317,17 @@ void AIPlayerJH::PlanNewBuildings(const unsigned gf)
 
     // pick a random storehouse and try to build one of these buildings around it (checks if we actually want more of
     // the building type)
-    std::array<BuildingType, 24> bldToTest = {
-      {BuildingType::HarborBuilding, BuildingType::Shipyard,   BuildingType::Sawmill,
-       BuildingType::Forester,       BuildingType::Farm,       BuildingType::Fishery,
-       BuildingType::Woodcutter,     BuildingType::Quarry,     BuildingType::GoldMine,
-       BuildingType::IronMine,       BuildingType::CoalMine,   BuildingType::GraniteMine,
-       BuildingType::Hunter,         BuildingType::Charburner, BuildingType::Ironsmelter,
-       BuildingType::Mint,           BuildingType::Armory,     BuildingType::Metalworks,
-       BuildingType::Brewery,        BuildingType::Mill,       BuildingType::PigFarm,
-       BuildingType::Slaughterhouse, BuildingType::Bakery,     BuildingType::DonkeyBreeder}};
-    const unsigned numResGatherBlds = 14; /* The first n buildings in the above list, that gather resources */
+    std::array<BuildingType, 27> bldToTest = {
+      {BuildingType::HarborBuilding, BuildingType::Shipyard,     BuildingType::Sawmill,
+       BuildingType::Forester,       BuildingType::Farm,         BuildingType::Fishery,
+       BuildingType::Woodcutter,     BuildingType::Quarry,       BuildingType::GoldMine,
+       BuildingType::IronMine,       BuildingType::CoalMine,     BuildingType::GraniteMine,
+       BuildingType::Hunter,         BuildingType::Charburner,   BuildingType::Vineyard,
+       BuildingType::Ironsmelter,    BuildingType::Mint,         BuildingType::Armory,
+       BuildingType::Metalworks,     BuildingType::Brewery,      BuildingType::Mill,
+       BuildingType::PigFarm,        BuildingType::Slaughterhouse, BuildingType::Bakery,
+       BuildingType::DonkeyBreeder,  BuildingType::Winery,       BuildingType::Temple}};
+    const unsigned numResGatherBlds = 15; /* The first n buildings in the above list, that gather resources */
 
     // LOG.write(("new buildorders %i whs and %i mil for player %i
     // \n",aii.GetStorehouses().size(),aii.GetMilitaryBuildings().size(),playerId);
@@ -1097,6 +1098,7 @@ void AIPlayerJH::HandleBuilingDestroyed(MapPoint pt, BuildingType bld)
     switch(bld)
     {
         case BuildingType::Charburner:
+        case BuildingType::Vineyard:
         case BuildingType::Farm: SetFarmedNodes(pt, false); break;
         case BuildingType::HarborBuilding:
         {
@@ -1979,6 +1981,10 @@ void AIPlayerJH::InitStoreAndMilitarylists()
     {
         SetFarmedNodes(charburner->GetPos(), true);
     }
+    for(const nobUsual* vineyard : aii.GetBuildings(BuildingType::Vineyard))
+    {
+        SetFarmedNodes(vineyard->GetPos(), true);
+    }
     // find the upgrade building
     UpdateUpgradeBuilding();
 }
@@ -2016,43 +2022,31 @@ const nobMilitary* AIPlayerJH::UpdateUpgradeBuilding()
 void AIPlayerJH::InitDistribution()
 {
     // set good distribution settings
+    // Entries are looked up by (good, building) so this stays valid if distributionMap changes
     Distributions goodSettings;
-    goodSettings[0] = 10; // food granite
-    goodSettings[1] = 10; // food coal
-    goodSettings[2] = 10; // food iron
-    goodSettings[3] = 10; // food gold
-    goodSettings[4] = 2;  // food temple
+    goodSettings.fill(10); // default for everything not listed below
+    const auto setDistribution = [&goodSettings](GoodType good, BuildingType bld, uint8_t value) {
+        for(unsigned i = 0; i < distributionMap.size(); ++i)
+        {
+            if(std::get<GoodType>(distributionMap[i]) == good && std::get<BuildingType>(distributionMap[i]) == bld)
+            {
+                goodSettings[i] = value;
+                return;
+            }
+        }
+        RTTR_Assert(false);
+    };
 
-    goodSettings[5] = 10; // grain mill
-    goodSettings[6] = 10; // grain pigfarm
-    goodSettings[7] = 10; // grain donkeybreeder
-    goodSettings[8] = 10; // grain brewery
-    goodSettings[9] = 10; // grain charburner
-
-    goodSettings[10] = 10; // iron armory
-    goodSettings[11] = 10; // iron metalworks
-
-    goodSettings[12] = 10; // coal armory
-    goodSettings[13] = 10; // coal ironsmelter
-    goodSettings[14] = 10; // coal mint
-
-    goodSettings[15] = 10; // wood sawmill
-    goodSettings[16] = 10; // wood charburner
-    goodSettings[17] = 2;  // wood vineyard
-
-    goodSettings[18] = 10; // boards new buildings
-    goodSettings[19] = 4;  // boards metalworks
-    goodSettings[20] = 2;  // boards shipyard
-    goodSettings[21] = 1;  // boards tannery
-
-    goodSettings[22] = 10; // water bakery
-    goodSettings[23] = 10; // water brewery
-    goodSettings[24] = 10; // water pigfarm
-    goodSettings[25] = 10; // water donkeybreeder
-    goodSettings[26] = 2;  // water vineyard
-
-    goodSettings[27] = 8; // ham slaughterhouse
-    goodSettings[28] = 3; // ham skinner
+    setDistribution(GoodType::Wood, BuildingType::Charburner, 3);
+    setDistribution(GoodType::Wood, BuildingType::Vineyard, 2);
+    setDistribution(GoodType::Boards, BuildingType::Metalworks, 4);
+    setDistribution(GoodType::Boards, BuildingType::Charburner, 3);
+    setDistribution(GoodType::Boards, BuildingType::Shipyard, 2);
+    setDistribution(GoodType::Boards, BuildingType::Tannery, 1);
+    setDistribution(GoodType::Water, BuildingType::Winery, 2);
+    setDistribution(GoodType::Ham, BuildingType::Slaughterhouse, 8);
+    setDistribution(GoodType::Ham, BuildingType::Skinner, 3);
+    setDistribution(GoodType::Ham, BuildingType::Temple, 2);
     aii.ChangeDistribution(goodSettings);
 }
 
