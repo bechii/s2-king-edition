@@ -39,7 +39,7 @@ constexpr helpers::EnumArray<BldWorkDescription, BuildingType> BLD_WORK_DESC = {
   {Job::Private, std::nullopt, WaresNeeded(GoodType::Coins), 4},
   {Job::Winegrower, GoodType::Grapes, WaresNeeded(GoodType::Wood)},
   {Job::Vintner, GoodType::Wine, WaresNeeded(GoodType::Grapes, GoodType::Water)},
-  {Job::TempleServant, GoodType::Gold, WaresNeeded(GoodType::Wine, GoodType::Meat, GoodType::Bread)},
+  {Job::TempleServant, GoodType::Gold, WaresNeeded(GoodType::Wine, GoodType::Ham)},
   {Job::Tanner, GoodType::Leather, WaresNeeded(GoodType::Skins, GoodType::Boards)},
   {Job::Private, std::nullopt, WaresNeeded(GoodType::Coins), 6},
   {Job::Miner, GoodType::Stones, WaresNeeded(GoodType::Fish, GoodType::Meat, GoodType::Bread), 2, false},

@@ -20,6 +20,7 @@ public:
                       _("None"),
                       _("Minimal Control"),
                       _("Full Control"),
-                    })
+                    },
+                    2)
     {}
 };
