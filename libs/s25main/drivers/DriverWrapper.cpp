@@ -94,12 +94,13 @@ bool DriverWrapper::CheckLibrary(const bfs::path& path, DriverType dt, std::stri
         return false;
     }
 
-    auto GetDriverAPIVersion = dll.get<GetDriverAPIVersion_t>("GetDriverAPIVersion");
-    if(!GetDriverAPIVersion)
+    // Note: get() throws if the symbol is missing, so check with has() first (e.g. dependency DLLs in the folder)
+    if(!dll.has("GetDriverAPIVersion") || !dll.has("GetDriverName"))
     {
         nameOrError = _("Not a RTTR driver library!");
         return false;
     }
+    auto GetDriverAPIVersion = dll.get<GetDriverAPIVersion_t>("GetDriverAPIVersion");
     if(GetDriverAPIVersion() != DRIVERAPIVERSION)
     {
         nameOrError = _("Invalid API version!");

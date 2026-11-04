@@ -16,7 +16,7 @@ protected:
     AddonMineResourceBehaviorBase(AddonId id, const std::string& name, const std::string& description)
         : AddonList(id, AddonGroup::Economy, name, description,
                     {_("Default"), _("Inexhaustible"), _("S4-like exhaustion"), _("Work everywhere")},
-                    static_cast<unsigned>(MineResourceBehavior::Default))
+                    static_cast<unsigned>(MineResourceBehavior::Inexhaustible))
     {}
 };
 
