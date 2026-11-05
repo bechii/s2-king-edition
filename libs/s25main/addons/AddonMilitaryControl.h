@@ -21,6 +21,6 @@ public:
                       _("Minimal Control"),
                       _("Full Control"),
                     },
-                    2)
+                    1)
     {}
 };

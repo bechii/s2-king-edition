@@ -31,6 +31,8 @@
 constexpr unsigned ARMOR_ENABLE_BUTTON_ID = 10 + NUM_SOLDIER_RANKS * 4 + 1;
 constexpr unsigned WINE_ENABLE_BUTTON_ID = ARMOR_ENABLE_BUTTON_ID + 1;
 constexpr unsigned HEIGHT_OF_ROW = 38;
+/// Height of the hitpoints bar drawn above the soldiers (addon military hitpoints)
+constexpr unsigned HITPOINTS_ROW_HEIGHT = 14;
 
 iwMilitaryBuilding::iwMilitaryBuilding(GameWorldView& gwv, GameCommandFactory& gcFactory, nobMilitary* const building)
     : IngameWindow(CGI_BUILDING + MapBase::CreateGUIID(building->GetPos()), IngameWindow::posAtMouse, Extent(226, 194),
@@ -49,7 +51,9 @@ iwMilitaryBuilding::iwMilitaryBuilding(GameWorldView& gwv, GameCommandFactory& g
     const unsigned numExtra = (leatherAddonActive ? 1u : 0u) + (wineActive ? 1u : 0u);
     // Without military control buttons the first extra button takes the free slot of the control button
     const unsigned numExtraWide = (addonStatusMilitaryControl == 0 && numExtra > 0) ? numExtra - 1 : numExtra;
-    const DrawPoint btOffsetExtra(36 * numExtraWide, HEIGHT_OF_ROW * numExtra);
+    const unsigned hitpointsExtra =
+      gwv.GetWorld().GetGGS().isEnabled(AddonId::MILITARY_HITPOINTS) ? HITPOINTS_ROW_HEIGHT : 0u;
+    const DrawPoint btOffsetExtra(36 * numExtraWide, HEIGHT_OF_ROW * numExtra + hitpointsExtra);
     btOffset += btOffsetExtra;
     // x position of the first button after the (optional) military control button
     const int firstExtraButtonX = (addonStatusMilitaryControl == 0) ? 126 : 162;
@@ -199,6 +203,10 @@ void iwMilitaryBuilding::DrawContent()
         }
     }
 
+    // Make room for the hitpoints drawn above the soldiers so they don't touch the row above
+    if(gwv.GetWorld().GetGGS().isEnabled(AddonId::MILITARY_HITPOINTS))
+        btOffsetY += HITPOINTS_ROW_HEIGHT;
+
     const unsigned maxSoldierCt = building->GetMaxTroopsCt();
     DrawPoint troopsPos = GetDrawPos() + DrawPoint((GetSize().x - 22 * maxSoldierCt) / 2, btOffsetY);
     // Schwarzer Untergrund für Soldatenanzeige
@@ -217,10 +225,10 @@ void iwMilitaryBuilding::DrawContent()
     // Draw health above soldiers
     if(gwv.GetWorld().GetGGS().isEnabled(AddonId::MILITARY_HITPOINTS))
     {
-        DrawPoint healthPos = troopsPos - DrawPoint(0, 14);
+        DrawPoint healthPos = troopsPos - DrawPoint(0, HITPOINTS_ROW_HEIGHT);
 
         // black background for hitpoints
-        DrawRectangle(Rect(healthPos, Extent(22 * maxSoldierCt, 14)), 0x96000000);
+        DrawRectangle(Rect(healthPos, Extent(22 * maxSoldierCt, HITPOINTS_ROW_HEIGHT)), 0x96000000);
 
         healthPos += DrawPoint(12, 2);
         for(const auto* soldier : soldiers)
