@@ -180,12 +180,12 @@ AIPlayerJH::AIPlayerJH(const unsigned char playerId, const GameWorldBase& gwb, c
             build_interval = 1200;
             break;
         case AI::Level::Medium:
-            attack_interval = 800;
-            build_interval = 400;
+            attack_interval = 1200;
+            build_interval = 600;
             break;
         case AI::Level::Hard:
-            attack_interval = 200;
-            build_interval = 200;
+            attack_interval = 600;
+            build_interval = 300;
             break;
         default: throw std::invalid_argument("Invalid AI level!");
     }

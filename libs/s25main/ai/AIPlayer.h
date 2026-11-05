@@ -42,6 +42,8 @@ public:
     const AIInterface& getAIInterface() const { return aii; }
     AIInterface& getAIInterface() { return aii; }
 
+    AI::Level GetLevel() const { return level; }
+
     /// Eigene PlayerId, die der KI-Spieler wissen sollte, z.B. wenn er die Karte untersucht
     const unsigned char playerId;
     /// Verweis auf den eigenen GameClientPlayer, d.h. die Wirtschaft, um daraus entsprechend Informationen zu gewinnen

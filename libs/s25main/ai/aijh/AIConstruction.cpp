@@ -429,11 +429,19 @@ bool AIConstruction::IsConnectedToRoadSystem(const noFlag* flag) const
         return false;
 }
 
+bool AIConstruction::IsMilBuildingAllowed(BuildingType bld) const
+{
+    // Easy AI is not allowed to build fortresses
+    if(bld == BuildingType::Fortress && aijh.GetLevel() == AI::Level::Easy)
+        return false;
+    return aii.CanBuildBuildingtype(bld);
+}
+
 helpers::OptionalEnum<BuildingType> AIConstruction::GetSmallestAllowedMilBuilding() const
 {
     for(BuildingType bld : BuildingProperties::militaryBldTypes)
     {
-        if(aii.CanBuildBuildingtype(bld))
+        if(IsMilBuildingAllowed(bld))
             return bld;
     }
     return std::nullopt;
@@ -443,7 +451,7 @@ helpers::OptionalEnum<BuildingType> AIConstruction::GetBiggestAllowedMilBuilding
 {
     for(BuildingType bld : boost::adaptors::reverse(BuildingProperties::militaryBldTypes))
     {
-        if(aii.CanBuildBuildingtype(bld))
+        if(IsMilBuildingAllowed(bld))
             return bld;
     }
     return std::nullopt;
@@ -472,7 +480,7 @@ helpers::OptionalEnum<BuildingType> AIConstruction::ChooseMilitaryBuilding(const
     if(aijh.getAIInterface().isHarborPosClose(pt, 19) && !AI::randomChance(10)
        && aijh.ggs.isEnabled(AddonId::SEA_ATTACK))
     {
-        if(aii.CanBuildBuildingtype(BuildingType::Watchtower))
+        if(IsMilBuildingAllowed(BuildingType::Watchtower))
             return BuildingType::Watchtower;
         return GetBiggestAllowedMilBuilding();
     }
@@ -532,13 +540,13 @@ helpers::OptionalEnum<BuildingType> AIConstruction::ChooseMilitaryBuilding(const
                 // there are no big building spots in that direction
                 if(AI::randomChance(10))
                 {
-                    if(aii.CanBuildBuildingtype(BuildingType::Guardhouse))
+                    if(IsMilBuildingAllowed(BuildingType::Guardhouse))
                         bld = BuildingType::Guardhouse;
                     else
                         bld = GetSmallestAllowedMilBuilding();
                 } else
                 {
-                    if(aii.CanBuildBuildingtype(BuildingType::Watchtower) && AI::randomChance())
+                    if(IsMilBuildingAllowed(BuildingType::Watchtower) && AI::randomChance())
                         bld = BuildingType::Watchtower;
                     else
                         bld = biggestBld;

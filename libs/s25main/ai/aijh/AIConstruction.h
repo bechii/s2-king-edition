@@ -59,6 +59,8 @@ public:
     /// Checks whether a flag is connected to the road system or not (connected = has path to HQ)
     bool IsConnectedToRoadSystem(const noFlag* flag) const;
 
+    /// Whether the AI may build this military building (addons/settings and AI level restrictions)
+    bool IsMilBuildingAllowed(BuildingType bld) const;
     helpers::OptionalEnum<BuildingType> GetSmallestAllowedMilBuilding() const;
     helpers::OptionalEnum<BuildingType> GetBiggestAllowedMilBuilding() const;
     /// Randomly chooses a military building, preferring bigger buildings if enemy nearby
