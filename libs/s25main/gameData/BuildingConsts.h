@@ -59,7 +59,7 @@ constexpr helpers::EnumArray<BldWorkDescription, BuildingType> BLD_WORK_DESC = {
   {Job::Armorer, GoodType::Sword, WaresNeeded(GoodType::Iron, GoodType::Coal)},
   {Job::Metalworker, GoodType::Tongs, WaresNeeded(GoodType::Iron, GoodType::Boards)},
   {Job::IronFounder, GoodType::Iron, WaresNeeded(GoodType::IronOre, GoodType::Coal)},
-  {Job::CharBurner, GoodType::Coal, WaresNeeded(GoodType::Wood, GoodType::Boards)},
+  {Job::CharBurner, GoodType::Coal, WaresNeeded(GoodType::Wood, GoodType::Grain)},
   {Job::PigBreeder, GoodType::Ham, WaresNeeded(GoodType::Grain, GoodType::Water)},
   {}, // Storehouse
   {},

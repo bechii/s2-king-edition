@@ -2040,7 +2040,7 @@ void AIPlayerJH::InitDistribution()
     setDistribution(GoodType::Wood, BuildingType::Charburner, 3);
     setDistribution(GoodType::Wood, BuildingType::Vineyard, 2);
     setDistribution(GoodType::Boards, BuildingType::Metalworks, 4);
-    setDistribution(GoodType::Boards, BuildingType::Charburner, 3);
+    setDistribution(GoodType::Grain, BuildingType::Charburner, 3);
     setDistribution(GoodType::Boards, BuildingType::Shipyard, 2);
     setDistribution(GoodType::Boards, BuildingType::Tannery, 1);
     setDistribution(GoodType::Water, BuildingType::Winery, 2);
